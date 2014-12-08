@@ -12,6 +12,31 @@ public class MatchController : MonoBehaviour
             this.v2 = v2;
         }
     }
+
+    class ScoreInfo
+    {
+        public int score;
+        public float time;
+        
+        public ScoreInfo(int score, float time)
+        {
+            this.score = score;
+            this.time = time;
+        }
+    }
+
+    enum MatchKind //TODO
+    {
+        SimpleThree,
+        FourInRow,
+        FiveInRow,
+        LShape,
+        TShape,
+        DoubleThree,
+        DoubleFour,
+        DoubleFive,
+    }
+
     [SerializeField]
     List<GameObject> items = new List<GameObject>();
 
@@ -24,6 +49,12 @@ public class MatchController : MonoBehaviour
     [SerializeField]
     float concurTime = 0.5f;
 
+    [SerializeField]
+    float scoreTime = 3;
+
+    [SerializeField]
+    GUISkin skin = null;
+
     List<List<MatchElement>> elements = null;
 
     float nextConcurTime = 0;
@@ -31,7 +62,10 @@ public class MatchController : MonoBehaviour
     Vector2 selected = new Vector2(-1, -1);
 
     SwapInfo swapToUndo = null;
-    
+
+    Queue<ScoreInfo> scores = new Queue<ScoreInfo>();
+    int totalScore = 0;
+
     void Start()
     {
         CreateField();
@@ -68,6 +102,8 @@ public class MatchController : MonoBehaviour
 
     void Update()
     {
+        CheckScores();
+        
         if (nextConcurTime < Time.time)
         {
             float time = FindConcur(concurTime);
@@ -91,6 +127,33 @@ public class MatchController : MonoBehaviour
             }
         }
         
+    }
+
+    private void CheckScores()
+    {
+        if (scores.Count == 0)
+            return;
+        var earliest = scores.Peek();
+
+        if (earliest.time < Time.time)
+            totalScore += scores.Dequeue().score;
+    }
+
+    void OnGUI()
+    {
+        if (skin != null)
+            GUI.skin = skin;
+
+        GUILayout.BeginArea(new Rect(0, 0, 130, 600));
+
+        GUILayout.Label(":" + totalScore, GUI.skin.box);
+
+        foreach (var score in scores)
+        {
+            GUILayout.Label("+" + score.score);
+        }
+        GUILayout.FlexibleSpace();
+        GUILayout.EndArea();
     }
 
     void CheckInput()
@@ -175,12 +238,19 @@ public class MatchController : MonoBehaviour
         int bonus4 = 0;
         int bonus5 = 0;
 
-        
         MarkExploded(concurTime, ref bonus3, ref bonus4, ref bonus5);
 
         float time = RemoveExplodedAndAddNew(concurTime);
+        
+        if (bonus3 > 0 || bonus4 > 0 || bonus5 > 0)
+            scores.Enqueue(new ScoreInfo(ScoreFromBonus(bonus3, bonus4, bonus5), Time.time + scoreTime));
 
-        return time;// bonus3 > 0 || bonus4 > 0 || bonus5 > 0;
+        return time;//;
+    }
+
+    private int ScoreFromBonus(int bonus3, int bonus4, int bonus5)
+    {
+        return bonus3 * 10 + bonus4 * 100 + bonus5 * 1000;
     }
     /// <summary>
     /// removes used elements and adds new
