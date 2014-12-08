@@ -3,6 +3,15 @@ using System.Collections.Generic;
 
 public class MatchController : MonoBehaviour
 {
+    class SwapInfo
+    {
+        public Vector2 v1, v2;
+        public SwapInfo(Vector2 v1, Vector2 v2)
+        {
+            this.v1 = v1;
+            this.v2 = v2;
+        }
+    }
     [SerializeField]
     List<GameObject> items = new List<GameObject>();
 
@@ -20,6 +29,8 @@ public class MatchController : MonoBehaviour
     float nextConcurTime = 0;
 
     Vector2 selected = new Vector2(-1, -1);
+
+    SwapInfo swapToUndo = null;
     
     void Start()
     {
@@ -64,10 +75,19 @@ public class MatchController : MonoBehaviour
             {
                 nextConcurTime = Time.time + time;
                 selected = new Vector2(-1, -1);
+                swapToUndo = null;
             }
             else
             {
-                CheckInput();
+                if (swapToUndo != null)
+                {
+                    Swap(swapToUndo.v1, swapToUndo.v2);
+                    swapToUndo = null;
+                }
+                else
+                {
+                    CheckInput();
+                }
             }
         }
         
@@ -141,6 +161,7 @@ public class MatchController : MonoBehaviour
 
         Debug.Log("Swap " + s1 + " " + s2);
         nextConcurTime = Time.time + concurTime;
+        swapToUndo = new SwapInfo(s1, s2);
     }
 
     private bool Inside(Vector2 pos)
